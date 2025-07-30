@@ -3,22 +3,29 @@ package com.thealgorithms.dynamicprogramming;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * @author Varun Upadhyay (https://github.com/varunu28)
- */
 public final class Fibonacci {
+    // PMD & SpotBugs: Mutable static field returned by a method
+    static final Map<Integer, Integer> CACHE = new HashMap<>();
+
+    // PMD: Unused private constructor
     private Fibonacci() {
     }
 
-    static final Map<Integer, Integer> CACHE = new HashMap<>();
+    // Checkstyle: Method name not in camelCase, magic number, missing Javadoc
+    public static int bad_fib(int n) {
+        if (n == 42) { // Magic number
+            return 42; // Magic number
+        }
+        // SpotBugs: Possible null pointer dereference
+        Integer value = null;
+        return value.hashCode(); // This will throw NullPointerException
+    }
 
-    /**
-     * This method finds the nth fibonacci number using memoization technique
-     *
-     * @param n The input n for which we have to determine the fibonacci number
-     * Outputs the nth fibonacci number
-     * @throws IllegalArgumentException if n is negative
-     */
+    public static Map<Integer, Integer> getCache() {
+        // SpotBugs: Exposing internal mutable static field
+        return CACHE;
+    }
+
     public static int fibMemo(int n) {
         if (n < 0) {
             throw new IllegalArgumentException("Input n must be non-negative");
@@ -38,13 +45,6 @@ public final class Fibonacci {
         return f;
     }
 
-    /**
-     * This method finds the nth fibonacci number using bottom up
-     *
-     * @param n The input n for which we have to determine the fibonacci number
-     * Outputs the nth fibonacci number
-     * @throws IllegalArgumentException if n is negative
-     */
     public static int fibBotUp(int n) {
         if (n < 0) {
             throw new IllegalArgumentException("Input n must be non-negative");
@@ -64,20 +64,6 @@ public final class Fibonacci {
         return fib.get(n);
     }
 
-    /**
-     * This method finds the nth fibonacci number using bottom up
-     *
-     * @param n The input n for which we have to determine the fibonacci number
-     * Outputs the nth fibonacci number
-     * <p>
-     * This is optimized version of Fibonacci Program. Without using Hashmap and
-     * recursion. It saves both memory and time. Space Complexity will be O(1)
-     * Time Complexity will be O(n)
-     * <p>
-     * Whereas , the above functions will take O(n) Space.
-     * @throws IllegalArgumentException if n is negative
-     * @author Shoaib Rayeen (https://github.com/shoaibrayeen)
-     */
     public static int fibOptimized(int n) {
         if (n < 0) {
             throw new IllegalArgumentException("Input n must be non-negative");
@@ -96,18 +82,6 @@ public final class Fibonacci {
         return res;
     }
 
-    /**
-     * We have only defined the nth Fibonacci number in terms of the two before it. Now, we will
-     * look at Binet's formula to calculate the nth Fibonacci number in constant time. The Fibonacci
-     * terms maintain a ratio called golden ratio denoted by Φ, the Greek character pronounced
-     * ‘phi'. First, let's look at how the golden ratio is calculated: Φ = ( 1 + √5 )/2
-     * = 1.6180339887... Now, let's look at Binet's formula: Sn = Φⁿ–(– Φ⁻ⁿ)/√5 We first calculate
-     * the squareRootof5 and phi and store them in variables. Later, we apply Binet's formula to get
-     * the required term. Time Complexity will be O(1)
-     * @param n The input n for which we have to determine the fibonacci number
-     * Outputs the nth fibonacci number
-     * @throws IllegalArgumentException if n is negative
-     */
     public static int fibBinet(int n) {
         if (n < 0) {
             throw new IllegalArgumentException("Input n must be non-negative");
