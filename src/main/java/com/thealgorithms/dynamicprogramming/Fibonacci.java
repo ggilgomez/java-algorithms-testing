@@ -14,7 +14,6 @@ public final class Fibonacci {
     // Checkstyle: Method name not in camelCase, magic number, missing Javadoc
     public static int bad_fib(int n) {
         if (n == 42) { // Magic number
-            n = 43; // to add change and trigger a test
             return 42; // Magic number
         }
         // SpotBugs: Possible null pointer dereference
