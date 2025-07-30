@@ -1,11 +1,12 @@
 pipeline {
     agent any
 
-    triggers {
-        // Poll SCM every 1 minute for new commits
-        pollSCM('* * * * *')
-        // Also trigger a full build every 15 minutes
-        cron('H/15 * * * *')
+    parameters {
+        choice(
+            name: 'BUILD_TYPE',
+            choices: ['incremental', 'full'],
+            description: 'Select build type: incremental (only changed tests), or full (all tests and static analysis)'
+        )
     }
 
     stages {
@@ -17,8 +18,7 @@ pipeline {
 
         stage('Incremental Test Selection') {
             when {
-                // Only run incremental tests if this is an SCM-triggered build (not timer or manual)
-                triggeredBy 'SCMTrigger'
+                expression { params.BUILD_TYPE == 'incremental' }
             }
             steps {
                 script {
@@ -64,11 +64,7 @@ pipeline {
 
         stage('Full Build and Site') {
             when {
-                anyOf {
-                    // Run full build if triggered by timer (cron) or manually
-                    triggeredBy 'TimerTrigger'
-                    triggeredBy 'UserIdCause'
-                }
+                expression { params.BUILD_TYPE == 'full' }
             }
             steps {
                 bat 'mvn clean verify site'
@@ -79,35 +75,59 @@ pipeline {
     post {
         always {
             junit '**/target/surefire-reports/*.xml'
-            jacoco execPattern: '**/target/jacoco.exec', classPattern: '**/target/classes', sourcePattern: '**/src/main/java'
-            recordIssues enabledForFailure: true, tool: checkStyle(pattern: '**/target/checkstyle-result.xml')
-            recordIssues enabledForFailure: true, tool: pmdParser(pattern: '**/target/pmd.xml')
-            recordIssues enabledForFailure: true, tool: spotBugs(pattern: '**/target/spotbugsXml.xml')
-            publishHTML(target: [
-                reportName: 'JaCoCo Coverage Report',
-                reportDir: 'target/site/jacoco',
-                reportFiles: 'index.html'
-            ])
-            publishHTML(target: [
-                reportName: 'CheckStyle Report',
-                reportDir: 'target/reports',
-                reportFiles: 'checkstyle.html'
-            ])
-            publishHTML(target: [
-                reportName: 'PMD Report',
-                reportDir: 'target/reports',
-                reportFiles: 'pmd.html'
-            ])
-            publishHTML(target: [
-                reportName: 'SpotBugs Report',
-                reportDir: 'target/site',
-                reportFiles: 'spotbugs.html'
-            ])
-            publishHTML(target: [
-                reportName: 'Test Report',
-                reportDir: 'target/reports',
-                reportFiles: 'surefire.html'
-            ])
+            // Only try to publish coverage if file exists
+            script {
+                if (fileExists('target/jacoco.exec')) {
+                    jacoco execPattern: '**/target/jacoco.exec', classPattern: '**/target/classes', sourcePattern: '**/src/main/java'
+                }
+                // Only run static analysis/parsing and publish reports for full builds
+                if (params.BUILD_TYPE == 'full') {
+                    if (fileExists('target/checkstyle-result.xml')) {
+                        recordIssues enabledForFailure: true, tool: checkStyle(pattern: '**/target/checkstyle-result.xml')
+                    }
+                    if (fileExists('target/pmd.xml')) {
+                        recordIssues enabledForFailure: true, tool: pmdParser(pattern: '**/target/pmd.xml')
+                    }
+                    if (fileExists('target/spotbugsXml.xml')) {
+                        recordIssues enabledForFailure: true, tool: spotBugs(pattern: '**/target/spotbugsXml.xml')
+                    }
+                    if (fileExists('target/site/jacoco/index.html')) {
+                        publishHTML(target: [
+                            reportName: 'JaCoCo Coverage Report',
+                            reportDir: 'target/site/jacoco',
+                            reportFiles: 'index.html'
+                        ])
+                    }
+                    if (fileExists('target/reports/checkstyle.html')) {
+                        publishHTML(target: [
+                            reportName: 'CheckStyle Report',
+                            reportDir: 'target/reports',
+                            reportFiles: 'checkstyle.html'
+                        ])
+                    }
+                    if (fileExists('target/reports/pmd.html')) {
+                        publishHTML(target: [
+                            reportName: 'PMD Report',
+                            reportDir: 'target/reports',
+                            reportFiles: 'pmd.html'
+                        ])
+                    }
+                    if (fileExists('target/site/spotbugs.html')) {
+                        publishHTML(target: [
+                            reportName: 'SpotBugs Report',
+                            reportDir: 'target/site',
+                            reportFiles: 'spotbugs.html'
+                        ])
+                    }
+                    if (fileExists('target/reports/surefire.html')) {
+                        publishHTML(target: [
+                            reportName: 'Test Report',
+                            reportDir: 'target/reports',
+                            reportFiles: 'surefire.html'
+                        ])
+                    }
+                }
+            }
         }
     }
 }
