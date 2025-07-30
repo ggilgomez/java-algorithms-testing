@@ -8,10 +8,6 @@ pipeline {
         cron('H/15 * * * *')
     }
 
-    // environment {
-        // Add any environment variables if needed
-    // }
-
     stages {
         stage('Checkout') {
             steps {
@@ -29,22 +25,31 @@ pipeline {
                     // Find changed Java files in the last commit (defensive for first commit)
                     def changed = bat(
                         script: '''
-                            if git rev-parse HEAD~1 >/dev/null 2>&1; then
-                                git diff --name-only HEAD~1 HEAD | grep '^src/main/java/com/thealgorithms/.*\\.java$' || true
-                            else
-                                git ls-files | grep '^src/main/java/com/thealgorithms/.*\\.java$' || true
-                            fi
+                            @echo off
+                            setlocal enabledelayedexpansion
+                            git rev-parse HEAD~1 >nul 2>&1
+                            if %ERRORLEVEL% EQU 0 (
+                                git diff --name-only HEAD~1 HEAD > files.txt
+                            ) else (
+                                git ls-files > files.txt
+                            )
+                            for /f "usebackq delims=" %%F in ("files.txt") do (
+                                echo %%F
+                            )
+                            del files.txt
                         ''',
                         returnStdout: true
-                    ).trim().split('\n').findAll { it }
+                    ).trim().split('\r?\n').findAll {
+                        it =~ /^src[\\/]+main[\\/]+java[\\/]+com[\\/]+thealgorithms[\\/]+.*\.java$/
+                    }
 
                     // Map to corresponding test classes
                     def testClasses = []
                     for (f in changed) {
-                        def base = f.replace('src/main/java/', '').replace('.java', '')
+                        def base = f.replaceAll('^src[\\\\/]+main[\\\\/]+java[\\\\/]+', '').replace('.java', '')
                         def testPath = "src/test/java/${base}Test.java"
                         if (fileExists(testPath)) {
-                            testClasses << base.replace('/', '.') + 'Test'
+                            testClasses << base.replaceAll(/[\\\\/]/, '.') + 'Test'
                         }
                     }
                     if (testClasses) {
@@ -73,7 +78,6 @@ pipeline {
 
     post {
         always {
-            // These steps publish reports if you have the plugins installed
             junit '**/target/surefire-reports/*.xml'
             jacoco execPattern: '**/target/jacoco.exec', classPattern: '**/target/classes', sourcePattern: '**/src/main/java'
             recordIssues enabledForFailure: true, tool: checkStyle(pattern: '**/target/checkstyle-result.xml')
