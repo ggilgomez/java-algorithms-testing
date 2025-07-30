@@ -9,6 +9,12 @@ pipeline {
         )
     }
 
+    environment {
+        CHECKSTYLE_VERSION = '10.12.2'
+        PMD_VERSION = '6.55.0'
+        SPOTBUGS_VERSION = '4.8.3'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -16,7 +22,7 @@ pipeline {
             }
         }
 
-        stage('Incremental Test Selection') {
+        stage('Detect Changed Files') {
             when {
                 expression { params.BUILD_TYPE == 'incremental' }
             }
@@ -42,7 +48,18 @@ pipeline {
                     ).trim().split('\r?\n').findAll {
                         it =~ /^src[\\/]+main[\\/]+java[\\/]+com[\\/]+thealgorithms[\\/]+.*\.java$/
                     }
+                    env.CHANGED_FILES = changed.join(',')
+                }
+            }
+        }
 
+        stage('Incremental Test Selection') {
+            when {
+                expression { params.BUILD_TYPE == 'incremental' }
+            }
+            steps {
+                script {
+                    def changed = env.CHANGED_FILES?.split(',')?.findAll { it }
                     // Map to corresponding test classes
                     def testClasses = []
                     for (f in changed) {
@@ -62,6 +79,49 @@ pipeline {
             }
         }
 
+        stage('Incremental Static Analysis') {
+            when {
+                expression { params.BUILD_TYPE == 'incremental' }
+            }
+            steps {
+                script {
+                    def changed = env.CHANGED_FILES?.split(',')?.findAll { it }
+                    if (changed && changed.size() > 0) {
+                        // Download Checkstyle jar
+                        bat """
+                            if not exist checkstyle.jar curl -L -o checkstyle.jar https://github.com/checkstyle/checkstyle/releases/download/checkstyle-${env.CHECKSTYLE_VERSION}/checkstyle-${env.CHECKSTYLE_VERSION}-all.jar
+                        """
+                        // Download PMD zip and extract pmd.bat
+                        bat """
+                            if not exist pmd-bin.zip curl -L -o pmd-bin.zip https://github.com/pmd/pmd/releases/download/pmd_releases%2F${env.PMD_VERSION}/pmd-bin-${env.PMD_VERSION}.zip
+                            if not exist pmd-bin-${env.PMD_VERSION} mkdir pmd-bin-${env.PMD_VERSION}
+                            if not exist pmd-bin-${env.PMD_VERSION}\\bin\\pmd.bat tar -xf pmd-bin.zip
+                        """
+                        // Download SpotBugs jar
+                        bat """
+                            if not exist spotbugs.zip curl -L -o spotbugs.zip https://github.com/spotbugs/spotbugs/releases/download/${env.SPOTBUGS_VERSION}/spotbugs-${env.SPOTBUGS_VERSION}.zip
+                            if not exist spotbugs-${env.SPOTBUGS_VERSION} mkdir spotbugs-${env.SPOTBUGS_VERSION}
+                            if not exist spotbugs-${env.SPOTBUGS_VERSION}\\lib\\spotbugs.jar tar -xf spotbugs.zip
+                        """
+                        // Run Checkstyle on changed files
+                        def filesArg = changed.collect { "\"${it}\"" }.join(' ')
+                        bat "java -jar checkstyle.jar -c checkstyle.xml -f xml -o checkstyle-incremental.xml ${filesArg}"
+                        // Run PMD on changed files
+                        bat "pmd-bin-${env.PMD_VERSION}\\bin\\pmd.bat -d ${changed.join(',')} -R pmd.xml -f xml -r pmd-incremental.xml"
+                        // Compile changed files for SpotBugs
+                        bat "mvn compile"
+                        // Map source files to class files for SpotBugs
+                        def classFiles = changed.collect { it.replace('src/main/java/', 'target/classes/').replace('.java', '.class') }
+                        def classFilesArg = classFiles.collect { "\"${it}\"" }.join(' ')
+                        bat "java -jar spotbugs-${env.SPOTBUGS_VERSION}\\lib\\spotbugs.jar -textui -xml -output spotbugs-incremental.xml ${classFilesArg}"
+                        archiveArtifacts artifacts: '*.xml', onlyIfSuccessful: true
+                    } else {
+                        echo "No changed files to analyze."
+                    }
+                }
+            }
+        }
+
         stage('Full Build and Site') {
             when {
                 expression { params.BUILD_TYPE == 'full' }
@@ -75,12 +135,10 @@ pipeline {
     post {
         always {
             junit '**/target/surefire-reports/*.xml'
-            // Only try to publish coverage if file exists
             script {
                 if (fileExists('target/jacoco.exec')) {
                     jacoco execPattern: '**/target/jacoco.exec', classPattern: '**/target/classes', sourcePattern: '**/src/main/java'
                 }
-                // Only run static analysis/parsing and publish reports for full builds
                 if (params.BUILD_TYPE == 'full') {
                     if (fileExists('target/checkstyle-result.xml')) {
                         recordIssues enabledForFailure: true, tool: checkStyle(pattern: '**/target/checkstyle-result.xml')
@@ -125,6 +183,16 @@ pipeline {
                             reportDir: 'target/reports',
                             reportFiles: 'surefire.html'
                         ])
+                    }
+                } else if (params.BUILD_TYPE == 'incremental') {
+                    if (fileExists('checkstyle-incremental.xml')) {
+                        recordIssues enabledForFailure: false, tool: checkStyle(pattern: 'checkstyle-incremental.xml')
+                    }
+                    if (fileExists('pmd-incremental.xml')) {
+                        recordIssues enabledForFailure: false, tool: pmdParser(pattern: 'pmd-incremental.xml')
+                    }
+                    if (fileExists('spotbugs-incremental.xml')) {
+                        recordIssues enabledForFailure: false, tool: spotBugs(pattern: 'spotbugs-incremental.xml')
                     }
                 }
             }
