@@ -63,7 +63,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.3</version>
                 <configuration>
-                    <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
+                    <forkNode
+                        implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory" />
                 </configuration>
             </plugin>
             <plugin>
@@ -109,11 +110,20 @@
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <violationSeverity>warning</violationSeverity>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>checkstyle-report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>checkstyle</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <dependencies>
                     <dependency>
-                    <groupId>com.puppycrawl.tools</groupId>
-                    <artifactId>checkstyle</artifactId>
-                    <version>10.26.1</version>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>10.26.1</version>
                     </dependency>
                 </dependencies>
             </plugin>
@@ -137,6 +147,15 @@
                         </plugin>
                     </plugins>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>spotbugs-report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>spotbugs</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -146,13 +165,22 @@
                     <rulesets>
                         <ruleset>/rulesets/java/maven-pmd-plugin-default.xml</ruleset>
                         <ruleset>/category/java/security.xml</ruleset>
-                        <ruleset>file://${basedir}/pmd-custom_ruleset.xml</ruleset>
+                        <ruleset>${basedir}/pmd-custom_ruleset.xml</ruleset>
                     </rulesets>
                     <printFailingErrors>true</printFailingErrors>
                     <includeTests>true</includeTests>
                     <linkXRef>false</linkXRef>
                     <excludeFromFailureFile>pmd-exclude.properties</excludeFromFailureFile>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>pmd-report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>pmd</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
