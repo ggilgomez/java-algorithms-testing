@@ -26,10 +26,14 @@ pipeline {
             }
             steps {
                 script {
-                    // Find changed Java files in the last commit
+                    // Find changed Java files in the last commit (defensive for first commit)
                     def changed = sh(
                         script: '''
-                            git diff --name-only HEAD~1 HEAD | grep '^src/main/java/com/thealgorithms/.*\\.java$' || true
+                            if git rev-parse HEAD~1 >/dev/null 2>&1; then
+                                git diff --name-only HEAD~1 HEAD | grep '^src/main/java/com/thealgorithms/.*\\.java$' || true
+                            else
+                                git ls-files | grep '^src/main/java/com/thealgorithms/.*\\.java$' || true
+                            fi
                         ''',
                         returnStdout: true
                     ).trim().split('\n').findAll { it }
@@ -76,22 +80,22 @@ pipeline {
             recordIssues enabledForFailure: true, tool: pmdParser(pattern: '**/target/pmd.xml')
             recordIssues enabledForFailure: true, tool: spotBugs(pattern: '**/target/spotbugsXml.xml')
             publishHTML(target: [
-                reportName: 'JaCoCo Coverage',
+                reportName: 'JaCoCo Coverage Report',
                 reportDir: 'target/site/jacoco',
                 reportFiles: 'index.html'
             ])
             publishHTML(target: [
-                reportName: 'CheckStyle',
+                reportName: 'CheckStyle Report',
                 reportDir: 'target/reports',
                 reportFiles: 'checkstyle.html'
             ])
             publishHTML(target: [
-                reportName: 'PMD',
+                reportName: 'PMD Report',
                 reportDir: 'target/reports',
                 reportFiles: 'pmd.html'
             ])
             publishHTML(target: [
-                reportName: 'SpotBugs',
+                reportName: 'SpotBugs Report',
                 reportDir: 'target/site',
                 reportFiles: 'spotbugs.html'
             ])
