@@ -26,16 +26,6 @@ public final class Fibonacci {
         return CACHE;
     }
 
-    public static void pmdExample() {
-        // PMD should find errors here
-    int unused = 0; // Unused variable
-    try {
-        int x = 1 / 0;
-    } catch (Exception e) {
-        // Empty catch block
-    }
-}
-
     public static int fibMemo(int n) {
         if (n < 0) {
             throw new IllegalArgumentException("Input n must be non-negative");
