@@ -27,7 +27,7 @@ pipeline {
             steps {
                 script {
                     // Find changed Java files in the last commit (defensive for first commit)
-                    def changed = sh(
+                    def changed = bat(
                         script: '''
                             if git rev-parse HEAD~1 >/dev/null 2>&1; then
                                 git diff --name-only HEAD~1 HEAD | grep '^src/main/java/com/thealgorithms/.*\\.java$' || true
@@ -49,7 +49,7 @@ pipeline {
                     }
                     if (testClasses) {
                         echo "Running tests: ${testClasses.join(',')}"
-                        sh "mvn -B -Dtest=${testClasses.join(',')} test"
+                        bat "mvn -B -Dtest=${testClasses.join(',')} test"
                     } else {
                         echo "No changed classes with matching tests found, skipping selective tests."
                     }
@@ -66,7 +66,7 @@ pipeline {
                 }
             }
             steps {
-                sh 'mvn clean verify site'
+                bat 'mvn clean verify site'
             }
         }
     }
