@@ -8,9 +8,9 @@ pipeline {
         cron('H/15 * * * *')
     }
 
-    environment {
+    // environment {
         // Add any environment variables if needed
-    }
+    // }
 
     stages {
         stage('Checkout') {
