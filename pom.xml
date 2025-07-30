@@ -60,12 +60,16 @@
     <build>
         <plugins>
             <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
                 <version>3.5.3</version>
-                <configuration>
-                    <forkNode
-                        implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory" />
-                </configuration>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
