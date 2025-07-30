@@ -1,16 +1,13 @@
 <?xml version="1.0"?>
 <ruleset name="TheAlgorithms/Java ruleset"
-    xmlns="http://pmd.sf.net/ruleset/1.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://pmd.sf.net/ruleset/1.0.0 http://pmd.sf.net/ruleset_xml_schema.xsd"
-    xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
+         xmlns="https://pmd.github.io/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://pmd.github.io/ruleset/2.0.0 https://pmd.github.io/ruleset_2_0_0.xsd">
   <description>
     Custom PMD checks for TheAlgorithms/Java
   </description>
-  <rule ref="category/java/bestpractices.xml"/>
-  <rule ref="category/java/errorprone.xml"/>
-  <rule ref="category/java/codestyle.xml"/>
-  <rule ref="category/java/empty.xml"/>
+  <rule ref="rulesets/java/quickstart.xml"/>
+  <!-- Your custom rule can still be included here -->
   <rule name="UselessMainMethod"
         language="java"
         message="The main method is redundant in this context"
